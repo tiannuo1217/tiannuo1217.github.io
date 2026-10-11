@@ -1,0 +1,372 @@
+{
+  "n": 64000,
+  "spend_sd": 14.99163384555961,
+  "followup_n_per_arm": {
+    "targeting_gain": 311877,
+    "gain": 0.10635955184778202
+  },
+  "converter_aov": {
+    "Men's email": 113.53,
+    "No email": 114.0,
+    "Women's email": 121.89
+  },
+  "arm_counts": {
+    "Men's email": 21307,
+    "Women's email": 21387,
+    "No email": 21306
+  },
+  "srm_p_value": 0.9036929575604196,
+  "max_abs_smd": {
+    "Men's email": 0.01365900039927919,
+    "Women's email": 0.008630731202833338
+  },
+  "baseline": {
+    "visit": 0.10616727682343002,
+    "conversion": 0.005726086548390125,
+    "spend": 0.6527893551112363
+  },
+  "effects": [
+    {
+      "treatment": "Men's email",
+      "metric": "visit",
+      "control": 0.10616727682343002,
+      "treated": 0.18275684047496127,
+      "lift": 0.07658956365153125,
+      "ci_low": 0.06995322354054331,
+      "ci_high": 0.08322590376251918,
+      "relative_lift": 0.721404616781399,
+      "p_value": 1.3644511962742709e-112,
+      "p_holm": 8.186707177645625e-112
+    },
+    {
+      "treatment": "Men's email",
+      "metric": "conversion",
+      "control": 0.005726086548390125,
+      "treated": 0.01253109306800582,
+      "lift": 0.006805006519615695,
+      "ci_low": 0.005000095859575119,
+      "ci_high": 0.00860991717965627,
+      "relative_lift": 1.188421876286328,
+      "p_value": 1.501815785154377e-13,
+      "p_holm": 6.007263140617508e-13
+    },
+    {
+      "treatment": "Men's email",
+      "metric": "spend",
+      "control": 0.6527893551112363,
+      "treated": 1.422616511005773,
+      "lift": 0.7698271558945367,
+      "ci_low": 0.48514389780708517,
+      "ci_high": 1.054510413981988,
+      "relative_lift": 1.1792887703620059,
+      "p_value": 1.1638149682254859e-07,
+      "p_holm": 3.491444904676458e-07
+    },
+    {
+      "treatment": "Women's email",
+      "metric": "visit",
+      "control": 0.10616727682343002,
+      "treated": 0.151400383410483,
+      "lift": 0.045233106587052985,
+      "ci_low": 0.03889356087283547,
+      "ci_high": 0.0515726523012705,
+      "relative_lift": 0.4260550702669102,
+      "p_value": 2.432447702312722e-44,
+      "p_holm": 1.2162238511563609e-43
+    },
+    {
+      "treatment": "Women's email",
+      "metric": "conversion",
+      "control": 0.005726086548390125,
+      "treated": 0.008837144059475383,
+      "lift": 0.003111057511085258,
+      "ci_low": 0.0014986104390772204,
+      "ci_high": 0.004723504583093296,
+      "relative_lift": 0.5433130436982172,
+      "p_value": 0.00015602839508556401,
+      "p_holm": 0.00031205679017112803
+    },
+    {
+      "treatment": "Women's email",
+      "metric": "spend",
+      "control": 0.6527893551112363,
+      "treated": 1.0772015710478329,
+      "lift": 0.4244122159365966,
+      "ci_low": 0.16895981321938275,
+      "ci_high": 0.6798646186538104,
+      "relative_lift": 0.6501518638646859,
+      "p_value": 0.0011293971023632523,
+      "p_holm": 0.0011293971023632523
+    }
+  ],
+  "heterogeneity": [
+    {
+      "cell": "Bought both \u00b7 existing",
+      "treatment": "Men's email",
+      "metric": "conversion",
+      "n_per_arm": 832,
+      "lift": 0.021210407239819005,
+      "ci_low": 0.009705265900145095,
+      "ci_high": 0.032715548579492916,
+      "p_value": 0.00031452760963530257
+    },
+    {
+      "cell": "Bought both \u00b7 existing",
+      "treatment": "Men's email",
+      "metric": "spend",
+      "n_per_arm": 832,
+      "lift": 2.3829164309954747,
+      "ci_low": 0.03991096479294365,
+      "ci_high": 4.725921897198006,
+      "p_value": 0.0464084503662554
+    },
+    {
+      "cell": "Bought both \u00b7 existing",
+      "treatment": "Women's email",
+      "metric": "conversion",
+      "n_per_arm": 832,
+      "lift": 0.004936522065023891,
+      "ci_low": -0.00326860337772859,
+      "ci_high": 0.013141647507776372,
+      "p_value": 0.2385043901095896
+    },
+    {
+      "cell": "Bought both \u00b7 existing",
+      "treatment": "Women's email",
+      "metric": "spend",
+      "n_per_arm": 832,
+      "lift": -0.3068028992551297,
+      "ci_low": -1.7289705673391105,
+      "ci_high": 1.115364768828851,
+      "p_value": 0.6724849813670813
+    },
+    {
+      "cell": "Bought both \u00b7 new",
+      "treatment": "Men's email",
+      "metric": "conversion",
+      "n_per_arm": 1317,
+      "lift": 0.010981477611145162,
+      "ci_low": 0.0008814638548488643,
+      "ci_high": 0.02108149136744146,
+      "p_value": 0.033187241377731796
+    },
+    {
+      "cell": "Bought both \u00b7 new",
+      "treatment": "Men's email",
+      "metric": "spend",
+      "n_per_arm": 1317,
+      "lift": 1.4500023534246724,
+      "ci_low": -0.1328144001838456,
+      "ci_high": 3.0328191070331902,
+      "p_value": 0.07270693990734056
+    },
+    {
+      "cell": "Bought both \u00b7 new",
+      "treatment": "Women's email",
+      "metric": "conversion",
+      "n_per_arm": 1317,
+      "lift": 0.005584407449233057,
+      "ci_low": -0.0037250517116688316,
+      "ci_high": 0.014893866610134945,
+      "p_value": 0.23981298029975287
+    },
+    {
+      "cell": "Bought both \u00b7 new",
+      "treatment": "Women's email",
+      "metric": "spend",
+      "n_per_arm": 1317,
+      "lift": 0.4586916363853506,
+      "ci_low": -0.8551673101829258,
+      "ci_high": 1.772550582953627,
+      "p_value": 0.4938670206615654
+    },
+    {
+      "cell": "Bought men's only \u00b7 existing",
+      "treatment": "Men's email",
+      "metric": "conversion",
+      "n_per_arm": 4917,
+      "lift": 0.0037981646650182502,
+      "ci_low": -0.0003093107021280095,
+      "ci_high": 0.00790564003216451,
+      "p_value": 0.06995556270593263
+    },
+    {
+      "cell": "Bought men's only \u00b7 existing",
+      "treatment": "Men's email",
+      "metric": "spend",
+      "n_per_arm": 4917,
+      "lift": 0.16884898567871387,
+      "ci_low": -0.4631924747195275,
+      "ci_high": 0.8008904460769553,
+      "p_value": 0.6005608850886475
+    },
+    {
+      "cell": "Bought men's only \u00b7 existing",
+      "treatment": "Women's email",
+      "metric": "conversion",
+      "n_per_arm": 4917,
+      "lift": -0.002829843026298559,
+      "ci_low": -0.006249786976067207,
+      "ci_high": 0.0005901009234700891,
+      "p_value": 0.10487766527164852
+    },
+    {
+      "cell": "Bought men's only \u00b7 existing",
+      "treatment": "Women's email",
+      "metric": "spend",
+      "n_per_arm": 4917,
+      "lift": -0.12790520809832373,
+      "ci_low": -0.7533591190558285,
+      "ci_high": 0.49754870285918107,
+      "p_value": 0.6885616620222316
+    },
+    {
+      "cell": "Bought men's only \u00b7 new",
+      "treatment": "Men's email",
+      "metric": "conversion",
+      "n_per_arm": 4721,
+      "lift": 0.008319444428149091,
+      "ci_low": 0.005183571032716536,
+      "ci_high": 0.011455317823581647,
+      "p_value": 2.056341229748445e-07
+    },
+    {
+      "cell": "Bought men's only \u00b7 new",
+      "treatment": "Men's email",
+      "metric": "spend",
+      "n_per_arm": 4721,
+      "lift": 1.2174682385775617,
+      "ci_low": 0.6201985019188304,
+      "ci_high": 1.814737975236293,
+      "p_value": 6.535440183735375e-05
+    },
+    {
+      "cell": "Bought men's only \u00b7 new",
+      "treatment": "Women's email",
+      "metric": "conversion",
+      "n_per_arm": 4721,
+      "lift": 0.004238994013887623,
+      "ci_low": 0.0016852293353968074,
+      "ci_high": 0.006792758692378439,
+      "p_value": 0.0011454315536475594
+    },
+    {
+      "cell": "Bought men's only \u00b7 new",
+      "treatment": "Women's email",
+      "metric": "spend",
+      "n_per_arm": 4721,
+      "lift": 0.701519874924585,
+      "ci_low": 0.2027844418370669,
+      "ci_high": 1.2002553080121032,
+      "p_value": 0.005849268242118802
+    },
+    {
+      "cell": "Bought women's only \u00b7 existing",
+      "treatment": "Men's email",
+      "metric": "conversion",
+      "n_per_arm": 4862,
+      "lift": 0.005935373881197809,
+      "ci_low": 0.001992003946642391,
+      "ci_high": 0.009878743815753228,
+      "p_value": 0.0031849331692845205
+    },
+    {
+      "cell": "Bought women's only \u00b7 existing",
+      "treatment": "Men's email",
+      "metric": "spend",
+      "n_per_arm": 4862,
+      "lift": 0.6598635801855828,
+      "ci_low": 0.08822440862356962,
+      "ci_high": 1.231502751747596,
+      "p_value": 0.023691170740929263
+    },
+    {
+      "cell": "Bought women's only \u00b7 existing",
+      "treatment": "Women's email",
+      "metric": "conversion",
+      "n_per_arm": 4862,
+      "lift": 0.004027401170258313,
+      "ci_low": 0.00028115172253325533,
+      "ci_high": 0.007773650617983371,
+      "p_value": 0.035135893404306395
+    },
+    {
+      "cell": "Bought women's only \u00b7 existing",
+      "treatment": "Women's email",
+      "metric": "spend",
+      "n_per_arm": 4862,
+      "lift": 0.4289075806546394,
+      "ci_low": -0.08412226420261226,
+      "ci_high": 0.9419374255118911,
+      "p_value": 0.10132658030931864
+    },
+    {
+      "cell": "Bought women's only \u00b7 new",
+      "treatment": "Men's email",
+      "metric": "conversion",
+      "n_per_arm": 4657,
+      "lift": 0.005511736657608652,
+      "ci_low": 0.00239188267314486,
+      "ci_high": 0.008631590642072445,
+      "p_value": 0.0005377402207942339
+    },
+    {
+      "cell": "Bought women's only \u00b7 new",
+      "treatment": "Men's email",
+      "metric": "spend",
+      "n_per_arm": 4657,
+      "lift": 0.5713730907221554,
+      "ci_low": 0.1910844528332109,
+      "ci_high": 0.9516617286110998,
+      "p_value": 0.0032430652060571885
+    },
+    {
+      "cell": "Bought women's only \u00b7 new",
+      "treatment": "Women's email",
+      "metric": "conversion",
+      "n_per_arm": 4657,
+      "lift": 0.00625871367330356,
+      "ci_low": 0.003057231514193936,
+      "ci_high": 0.009460195832413185,
+      "p_value": 0.00012828219607455833
+    },
+    {
+      "cell": "Bought women's only \u00b7 new",
+      "treatment": "Women's email",
+      "metric": "spend",
+      "n_per_arm": 4657,
+      "lift": 0.8437184675343251,
+      "ci_low": 0.41223850728285627,
+      "ci_high": 1.275198427785794,
+      "p_value": 0.0001281079621270575
+    }
+  ],
+  "policy": {
+    "best_arm_by_cell": {
+      "Bought both \u00b7 existing": "Men's email",
+      "Bought both \u00b7 new": "Men's email",
+      "Bought men's only \u00b7 existing": "Men's email",
+      "Bought men's only \u00b7 new": "Men's email",
+      "Bought women's only \u00b7 existing": "Men's email",
+      "Bought women's only \u00b7 new": "Women's email"
+    },
+    "spend_per_customer": {
+      "No email": 0.7117491380113689,
+      "Women's email to everyone": 1.1347274760085715,
+      "Men's email to everyone": 1.2526520885898516,
+      "Targeted (best email per segment)": 1.362591159321605
+    },
+    "incremental_per_1000_vs_no_email": {
+      "No email": 0.0,
+      "Women's email to everyone": 422.97833799720263,
+      "Men's email to everyone": 540.9029505784827,
+      "Targeted (best email per segment)": 650.8420213102361
+    },
+    "targeted_minus_mens_all": 0.10635955184778202,
+    "targeted_minus_mens_all_ci": [
+      -0.03193366823465108,
+      0.27435972524095015
+    ],
+    "emails_sent_share": 1.0
+  }
+}

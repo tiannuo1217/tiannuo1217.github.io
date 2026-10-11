@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Retail Customer Analytics · Tiannuo Yang</title>
+<meta name="description" content="Cohort retention, LTV, RFM segmentation and a 64,000-customer email A/B test readout on two public retail datasets.">
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/site-config.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <nav class="site-nav">
+    <a class="brand" href="index.html">Tiannuo Yang</a>
+    <div class="links">
+      <a href="index.html">About</a>
+      <a data-link="github_repo">Code</a>
+      <a data-link="tableau">Dashboard</a>
+      <a data-link="linkedin">LinkedIn</a>
+    </div>
+  </nav>
+
+  <header>
+    <p class="eyebrow">Case study · Customer analytics</p>
+    <h1>Who to keep, who to email: a retail customer analytics case study</h1>
+    <p class="lede">Two public retail datasets, one question a CRM team asks every week: which customers are worth the next pound or dollar of marketing, and does the email we send actually change behavior?</p>
+    <div class="meta-row">
+      <span><strong>Role</strong> Solo analyst</span>
+      <span><strong>Tools</strong> SQL (SQLite) · Python (pandas, SciPy, statsmodels)</span>
+      <span><strong>Data</strong> 1.07M transactions · 64,000-customer experiment</span>
+    </div>
+    <ul class="tags">
+      <li>Data cleaning</li><li>Cohort retention</li><li>LTV</li><li>RFM segmentation</li><li>Holdout validation</li><li>A/B testing</li><li>Targeting</li>
+    </ul>
+  </header>
+
+  <h2>Summary</h2>
+  <div class="stats">
+    <div class="stat"><div class="value">71%</div><div class="label">of next-6-month revenue came from the 23% of customers segmented as Champions</div></div>
+    <div class="stat"><div class="value">~20%</div><div class="label">of new customers return the month after their first order, and the curve barely moves after that</div></div>
+    <div class="stat"><div class="value">22–27%</div><div class="label">less 12-month revenue per customer from holiday-quarter cohorts than from Q2–Q3 cohorts</div></div>
+    <div class="stat"><div class="value">2.2x</div><div class="label">conversion from the men's email vs. no email (0.57% → 1.25%)</div></div>
+  </div>
+  <ol class="findings">
+    <li><strong>The second purchase is the battleground.</strong> About one in five new customers orders again the next month, and that share stays roughly flat for a year. Customers who come back keep coming back, so the first 30 days after a first order deserve the most CRM effort.</li>
+    <li><strong>Value is concentrated, and the segmentation predicts it.</strong> Segments built only on data up to June 2011 sorted customers by what they actually spent over the following six months.</li>
+    <li><strong>Holiday shoppers are worth less.</strong> Q4 customers spent as much in their first month as anyone else; they just came back less. Acquisition targets for Q4 should assume a lower LTV.</li>
+    <li><strong>Send the men's email by default.</strong> It beat the women's email on visits, conversion and spend. A targeted rule looks about 20% better on a held-out half, but the gain isn't statistically clear yet, so it should be tested before it's rolled out.</li>
+  </ol>
+
+  <h2><span class="section-num">01</span>Data and cleaning</h2>
+  <p><a href="https://archive.ics.uci.edu/dataset/502/online+retail+ii" rel="noopener">UCI Online Retail II</a> holds every line item sold by a UK online giftware retailer from 1 Dec 2009 to 9 Dec 2011; many of its customers are small wholesalers. Before any analysis, I loaded the raw file into SQLite and applied five cleaning rules in order, counting what each one removed.</p>
+  <figure class="chart">
+    <figcaption><div class="title">Data-quality funnel</div><div class="sub">Line items remaining after each rule, applied cumulatively</div></figcaption>
+    <div class="table-scroll" id="funnel"></div>
+  </figure>
+  <p>The biggest cut is rows with no customer ID (23% of the raw file). They can't be tied to a person, so they can't feed retention or segmentation. Cancellations matter too: <span id="cancel-share"></span> of identified invoices were cancellations, so revenue would be overstated without the returns filter. The clean table has <strong id="clean-rows"></strong> line items, <strong id="clean-cust"></strong> customers and <strong id="clean-orders"></strong> orders.</p>
+
+  <h2><span class="section-num">02</span>Do new customers come back?</h2>
+  <p>I grouped customers by the month of their first order and measured what share ordered again in each following month.</p>
+  <figure class="chart">
+    <figcaption><div class="title">Monthly cohort retention</div><div class="sub">Share of each acquisition cohort that placed an order k months after its first order</div></figcaption>
+    <div class="viz" id="heatmap"></div>
+  </figure>
+  <p>For the January–November 2010 cohorts, <strong id="m1"></strong> ordered again in month 1, <strong id="m6"></strong> in month 6 and <strong id="m12"></strong> in month 12. Most of the drop-off happens before the second order; after that, retention is flat.</p>
+  <div class="callout"><strong>* A data trap worth catching.</strong> The December 2009 cohort looks far more loyal (<span id="dec-m1"></span> in month 1). It isn't a better cohort: the data starts that month, so its "new" customers include long-standing ones who simply hadn't been seen yet (left-censoring). I left it out of the averages above.</div>
+
+  <h2><span class="section-num">03</span>Which cohorts are worth more?</h2>
+  <p>Retention says whether customers return; lifetime value says what they're worth. I tracked cumulative revenue per acquired customer for the 2010 quarterly cohorts over their first 12 months.</p>
+  <figure class="chart">
+    <figcaption><div class="title">Cumulative revenue per customer, first 12 months</div><div class="sub">2010 acquisition cohorts, £ per customer acquired</div></figcaption>
+    <div class="viz" id="ltv"></div>
+  </figure>
+  <p>All four cohorts spent a similar amount in their first month (£440–£490). By month 12 the Q4 cohort (October–December, the holiday season) had reached <strong id="q4"></strong>, against <strong id="q2q3"></strong> for Q2 and Q3. That is 22–27% less. Q1 2010 is higher still, but it sits right after the data start, so some of its customers are probably returning customers rather than new ones; I don't lean on it.</p>
+
+  <h2><span class="section-num">04</span>Segmenting customers, and checking it works</h2>
+  <p>I scored every customer on recency and frequency as of 9 June 2011, using bands a marketing team can act on (ordered in the last 30 / 90 / 180 / 365 days; 1, 2, 3–4, 5–9 or 10+ orders), and grouped them into six segments. Then I checked the segments against what customers actually did over the next six months, data the segmentation never saw.</p>
+  <figure class="chart">
+    <figcaption><div class="title">Segment size vs. future revenue</div><div class="sub">Share of customers (as of 9 Jun 2011) and share of revenue over the following six months</div></figcaption>
+    <div class="viz" id="rfm"></div>
+  </figure>
+  <p><strong>Champions</strong> (ordered in the last 90 days, 5+ orders) are 23% of customers but produced 71% of next-6-month revenue, and 90% of them ordered again. The group to act on is <strong>At risk</strong>: 13% of customers who used to buy often (median 4 orders, historical spend close to Loyal customers) but hadn't ordered in over six months. Fewer than half came back. That's the win-back list.</p>
+
+  <h2><span class="section-num">05</span>Does the email work? An A/B test readout</h2>
+  <p>The <a href="https://blog.minethatdata.com/2008/03/minethatdata-e-mail-analytics-and-data.html" rel="noopener">MineThatData experiment</a> randomly split 64,000 recent customers into three groups: a men's merchandise email, a women's merchandise email, or no email. Visits, conversions and spend were tracked for two weeks.</p>
+  <p>Before reading results I checked the test was sound. Group sizes matched the planned one-third split (sample-ratio test p = <span id="srm"></span>), and every pre-test variable was balanced across groups (largest standardized difference <span id="smd"></span>, well under the usual 0.1 threshold).</p>
+  <figure class="chart">
+    <figcaption><div class="title">Lift vs. no email, with 95% confidence intervals</div><div class="sub">Difference from the no-email group; all six effects stay significant after Holm correction</div></figcaption>
+    <div class="viz" id="effects"></div>
+  </figure>
+  <p>Both emails worked, and the men's email won on every metric: conversion rose from <strong>0.57% to 1.25%</strong> and spend per customer by <strong>$0.77</strong>. Spend per buyer barely changed (<span id="aov"></span>), so the lift comes from more people buying, not bigger baskets.</p>
+
+  <h2><span class="section-num">06</span>Who responds?</h2>
+  <p>I split customers by what they had bought in the past year and whether they were new.</p>
+  <figure class="chart">
+    <figcaption><div class="title">Conversion lift by customer segment</div><div class="sub">Percentage-point lift vs. no email, 95% confidence intervals</div></figcaption>
+    <div class="viz" id="hetero"></div>
+  </figure>
+  <p>The men's email matched or beat the women's email in five of six segments, even among customers who had only bought women's merchandise. The women's email was only marginally ahead for <em>new</em> women's-only buyers. Existing customers who had only bought men's products barely responded to either email; with a real cost per send, they are the first group to suppress.</p>
+
+  <h2><span class="section-num">07</span>Does targeting beat a blanket send?</h2>
+  <p>To avoid grading my own homework, I split customers randomly in half. On the first half I picked the best email for each segment; on the second half I estimated what each policy would have earned (inverse-propensity weighting, which works because assignment was random).</p>
+  <figure class="chart">
+    <figcaption><div class="title">Incremental spend per 1,000 customers, held-out half</div><div class="sub">vs. sending no email</div></figcaption>
+    <div class="viz" id="policy"></div>
+  </figure>
+  <p>The targeted rule (women's email for new women's-only buyers, men's email for everyone else) earned about 20% more than sending the men's email to everyone. But the difference is <span id="policy-diff"></span> per customer with a 95% interval of <span id="policy-ci"></span>, so it could still be zero. Spend is noisy because 99% of customers spend nothing; confirming a gain this size would take about <strong id="followup"></strong> customers per arm. My recommendation is to ship the men's email as the default and run one focused test of the women's email on new women's-only buyers, using conversion as the primary metric.</p>
+
+  <h2>Recommendations</h2>
+  <ol class="findings">
+    <li><strong>Make the second order the KPI.</strong> Put onboarding and post-purchase CRM effort into the first 30 days, and report month-1 repeat rate by acquisition channel.</li>
+    <li><strong>Protect Champions, win back At-risk.</strong> Champions carry 71% of future revenue. The 665 At-risk customers have a track record of buying and are the best win-back audience.</li>
+    <li><strong>Budget Q4 acquisition on a lower LTV.</strong> Holiday cohorts are worth 22–27% less over a year; CAC targets should reflect that.</li>
+    <li><strong>Email: men's creative by default, one focused follow-up test.</strong> Suppress existing men's-only buyers once send costs are in the model.</li>
+  </ol>
+
+  <h2>Limitations</h2>
+  <ul class="plain">
+    <li>Both datasets are public and old (2008–2011), and they come from different businesses; the methods carry over, the exact numbers don't.</li>
+    <li>No cost or margin data, so the email analysis is about revenue, not profit.</li>
+    <li>RFM bands were chosen to be easy to act on, not optimized; a predictive LTV model (e.g. BG/NBD) would be the next step.</li>
+    <li>The experiment measured two weeks of behavior; longer-term effects such as unsubscribes aren't observed.</li>
+  </ul>
+
+  <h2>Reproduce it</h2>
+  <pre><code>python analysis/retail.py data/raw/online_retail_II.csv
+python analysis/email_experiment.py data/raw/hillstrom.csv
+python analysis/build_site_data.py</code></pre>
+  <p class="small muted">All SQL lives in <code>sql/</code>; every number on this page is generated by these scripts.</p>
+
+  <footer>
+    Tiannuo Yang · <a data-link="email">Email</a> · <a data-link="linkedin">LinkedIn</a> · <a href="index.html">About</a>
+  </footer>
+</div>
+
+<script src="assets/data.js"></script>
+<script src="assets/charts.js"></script>
+<script>
+(function () {
+  const D = window.SITE_DATA, R = D.retail, E = D.experiment, C = window.Charts;
+  const pct = (v, d = 1) => (v * 100).toFixed(d) + "%";
+  const num = (v) => Math.round(v).toLocaleString("en-US");
+  const gbp = (v) => "£" + Math.round(v).toLocaleString("en-US");
+  const usd = (v, d = 2) => (v < 0 ? "−$" : "$") + Math.abs(v).toFixed(d);
+  const set = (id, txt) => { const n = document.getElementById(id); if (n) n.textContent = txt; };
+  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const monthName = (ym) => MONTHS[+ym.slice(5) - 1] + " " + ym.slice(0, 4);
+
+  // 01 funnel table
+  const f = R.funnel;
+  const t = document.createElement("table");
+  const head = document.createElement("tr");
+  ["Step", "Rows remaining", "Removed", "% of raw kept"].forEach((h) => { const th = document.createElement("th"); th.textContent = h; head.appendChild(th); });
+  t.appendChild(head);
+  f.forEach((r, i) => {
+    const tr = document.createElement("tr");
+    [r.rule, num(r.rows_remaining), i ? "−" + num(f[i - 1].rows_remaining - r.rows_remaining) : "", pct(r.rows_remaining / f[0].rows_remaining)]
+      .forEach((c) => { const td = document.createElement("td"); td.textContent = c; tr.appendChild(td); });
+    t.appendChild(tr);
+  });
+  document.getElementById("funnel").appendChild(t);
+  set("cancel-share", pct(R.kpis.cancelled_invoice_share, 0));
+  set("clean-rows", num(R.kpis.clean_rows));
+  set("clean-cust", num(R.kpis.customers));
+  set("clean-orders", num(R.kpis.orders));
+
+  // 02 retention heatmap
+  const ret = R.retention, cohorts = ret.cohorts, cols = Array.from({ length: 12 }, (_, i) => i + 1);
+  const hm = document.getElementById("heatmap");
+  C.heatmap(hm, {
+    rows: cohorts.map(monthName), cols: cols.map(String), max: 0.4, flagRow: 0,
+    colTitle: "Months since first order",
+    value: (i, j) => ret.grid[cohorts[i]][cols[j]] ?? null,
+    tooltip: (i, j) => [{ value: pct(ret.grid[cohorts[i]][cols[j]]), label: "ordered in month " + cols[j] }, { value: num(ret.sizes[cohorts[i]]), label: "customers in cohort" }],
+    legendLabel: "Retention, 0% → 40%+",
+  });
+  C.tableView(hm, ["Cohort", "Customers"].concat(cols.map((c) => "M" + c)),
+    cohorts.map((c) => [monthName(c), num(ret.sizes[c])].concat(cols.map((k) => ret.grid[c][k] != null ? pct(ret.grid[c][k], 0) : "–"))));
+  set("m1", pct(ret.avg_m1, 0)); set("m6", pct(ret.avg_m6, 0)); set("m12", pct(ret.avg_m12, 0)); set("dec-m1", pct(ret.dec2009_m1, 0));
+
+  // 03 LTV lines
+  const q = R.ltv, quarters = ["2010-Q1", "2010-Q2", "2010-Q3", "2010-Q4"], slots = ["--series-1", "--series-2", "--series-3", "--series-4"];
+  const ltvEl = document.getElementById("ltv");
+  C.lines(ltvEl, {
+    x: Array.from({ length: 12 }, (_, i) => i + 1), xEvery: 1, xTitle: "Month of customer life (1 = month of first order)",
+    xTip: (m) => "Month " + m + " of customer life",
+    yFmt: (v) => gbp(v),
+    series: quarters.map((k, i) => ({ name: k.replace("-", " ") + " (" + num(q[k].customers) + " customers)", values: q[k].cumulative, color: slots[i],
+      endLabel: k === "2010-Q4" ? "Q4 " + gbp(q[k].cumulative[11]) : k === "2010-Q1" ? "Q1 " + gbp(q[k].cumulative[11]) : null })),
+  });
+  C.tableView(ltvEl, ["Month"].concat(quarters), Array.from({ length: 12 }, (_, i) => [String(i + 1)].concat(quarters.map((k) => gbp(q[k].cumulative[i])))));
+  set("q4", gbp(q["2010-Q4"].cumulative[11]));
+  set("q2q3", gbp(q["2010-Q2"].cumulative[11]) + "–" + gbp(q["2010-Q3"].cumulative[11]));
+
+  // 04 RFM grouped bars
+  const seg = R.rfm.segments, rfmEl = document.getElementById("rfm");
+  C.groupedBars(rfmEl, {
+    cats: seg.map((s) => s.segment), labelWidth: 118, fmt: (v) => pct(v, 0),
+    series: [{ name: "Share of customers", values: seg.map((s) => s.share_customers), color: "--series-1" },
+             { name: "Share of next-6-month revenue", values: seg.map((s) => s.share_next6m_revenue), color: "--series-2" }],
+  });
+  C.tableView(rfmEl, ["Segment", "Customers", "% customers", "% next-6m revenue", "Ordered again", "Median days since order", "Median orders"],
+    seg.map((s) => [s.segment, num(s.customers), pct(s.share_customers), pct(s.share_next6m_revenue), pct(s.repurchase_rate_next6m, 0), num(s.median_recency_days), String(s.median_orders)]));
+
+  // 05 effects small multiples
+  set("srm", E.srm_p_value.toFixed(2));
+  set("smd", Math.max(...Object.values(E.max_abs_smd)).toFixed(3));
+  const aov = E.converter_aov;
+  set("aov", usd(aov["No email"]) + " with no email, " + usd(aov["Men's email"]) + " with the men's email");
+  const metricFmt = {
+    visit: (v, full) => (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(full ? 1 : 0) + " pp",
+    conversion: (v, full) => (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(full ? 2 : 1) + " pp",
+    spend: (v, full) => (v >= 0 ? "+" : "−") + "$" + Math.abs(v).toFixed(full ? 2 : 1),
+  };
+  const metricTitle = { visit: "Visit rate", conversion: "Conversion rate", spend: "Spend per customer" };
+  const effEl = document.getElementById("effects");
+  const treat = [{ name: "Men's email", color: "--series-1" }, { name: "Women's email", color: "--series-2" }];
+  ["visit", "conversion", "spend"].forEach((m) => {
+    const panel = document.createElement("div");
+    const ttl = document.createElement("div"); ttl.className = "panel-title"; ttl.textContent = metricTitle[m]; panel.appendChild(ttl);
+    effEl.appendChild(panel);
+    const rows = treat.map((tr) => E.effects.find((e) => e.metric === m && e.treatment === tr.name));
+    C.dotCI(panel, {
+      legend: false, labelWidth: 118, rowH: 30, tickCount: 5,
+      cats: treat.map((tr) => tr.name), fmt: metricFmt[m],
+      series: [{ name: metricTitle[m], color: "--series-1", points: rows.map((e, i) => ({ est: e.lift, lo: e.ci_low, hi: e.ci_high, color: treat[i].color })) }],
+    });
+  });
+  C.legend(effEl.parentElement, treat.map((tr) => ({ kind: "swatch", color: tr.color, label: tr.name })));
+  C.tableView(effEl.parentElement, ["Email", "Metric", "No email", "With email", "Lift", "95% CI", "Holm p"],
+    E.effects.map((e) => [e.treatment, metricTitle[e.metric],
+      e.metric === "spend" ? usd(e.control) : pct(e.control, 2), e.metric === "spend" ? usd(e.treated) : pct(e.treated, 2),
+      metricFmt[e.metric](e.lift, true), metricFmt[e.metric](e.ci_low, true) + " to " + metricFmt[e.metric](e.ci_high, true), e.p_holm < 0.001 ? "<0.001" : e.p_holm.toFixed(3)]));
+
+  // 06 heterogeneity
+  const cells = ["Bought men's only · existing", "Bought men's only · new", "Bought women's only · existing", "Bought women's only · new", "Bought both · existing", "Bought both · new"];
+  const nice = (c) => c.replace("Bought ", "").replace(" · ", ", ").replace(/^./, (s) => s.toUpperCase());
+  const conv = E.heterogeneity.filter((h) => h.metric === "conversion");
+  const hetEl = document.getElementById("hetero");
+  C.dotCI(hetEl, {
+    labelWidth: 150, tickCount: 6, cats: cells.map(nice), fmt: metricFmt.conversion, xTitle: "Conversion lift, percentage points",
+    series: treat.map((tr) => ({ name: tr.name, color: tr.color, points: cells.map((c) => { const h = conv.find((x) => x.cell === c && x.treatment === tr.name); return { est: h.lift, lo: h.ci_low, hi: h.ci_high }; }) })),
+  });
+  C.tableView(hetEl, ["Segment", "Customers per arm", "Men's email lift", "Women's email lift"],
+    cells.map((c) => { const mm = conv.find((x) => x.cell === c && x.treatment === "Men's email"), ww = conv.find((x) => x.cell === c && x.treatment === "Women's email");
+      return [nice(c), num(mm.n_per_arm), metricFmt.conversion(mm.lift, true), metricFmt.conversion(ww.lift, true)]; }));
+
+  // 07 policy
+  const inc = E.policy.incremental_per_1000_vs_no_email;
+  const pol = ["Women's email to everyone", "Men's email to everyone", "Targeted (best email per segment)"];
+  const polEl = document.getElementById("policy");
+  C.emphasisBars(polEl, { cats: pol, values: pol.map((p) => inc[p]), highlight: 2, labelWidth: 220, fmt: (v) => "$" + num(v), valueLabel: "per 1,000 customers" });
+  C.tableView(polEl, ["Policy", "Spend per customer", "Incremental per 1,000"], ["No email"].concat(pol).map((p) => [p, usd(E.policy.spend_per_customer[p]), "$" + num(inc[p])]));
+  set("policy-diff", "+" + usd(E.policy.targeted_minus_mens_all));
+  set("policy-ci", usd(E.policy.targeted_minus_mens_all_ci[0]) + " to +" + usd(E.policy.targeted_minus_mens_all_ci[1]));
+  set("followup", Math.round(E.followup_n_per_arm.targeting_gain / 1000) * 1000 > 0 ? "~" + num(Math.round(E.followup_n_per_arm.targeting_gain / 1000) * 1000) : "");
+})();
+</script>
+</body>
+</html>
