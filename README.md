@@ -1,6 +1,6 @@
 # Retail Customer Analytics: Retention, Segmentation & an Email A/B Test
 
-**Live case study:** open `retail-customer-analytics.html` (or the GitHub Pages site for this repo).
+**Live case study:** https://tiannuo1217.github.io/retail-customer-analytics.html
 
 Two public retail datasets, one question a CRM team asks every week: which customers are worth the next pound or dollar of marketing, and does the email we send actually change behavior?
 

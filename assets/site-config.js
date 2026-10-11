@@ -2,7 +2,7 @@
 window.SITE_CONFIG = {
   email: "tiannuo1217@gmail.com",
   linkedin: "https://www.linkedin.com/in/tiannuo-yang",
-  github_repo: "",      // e.g. "https://github.com/<username>/retail-customer-analytics"
+  github_repo: "https://github.com/tiannuo1217/tiannuo1217.github.io",
   tableau: "",          // Tableau Public dashboard URL, once published
 };
 
