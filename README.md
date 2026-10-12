@@ -51,4 +51,4 @@ Outputs land in `outputs/` (JSON for the site, tidy CSVs in `outputs/tableau/` f
 Public, older datasets from two different businesses; no cost or margin data; RFM bands chosen for interpretability rather than optimized; the experiment observes two weeks of behavior only.
 
 ---
-Tiannuo Yang · [LinkedIn](https://www.linkedin.com/in/tiannuo-yang)
+Tiannuo Yang · [LinkedIn](https://www.linkedin.com/in/tiannuo-yang-a5b176443)
