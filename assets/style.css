@@ -149,8 +149,10 @@ figure.chart figcaption .sub { font-size: 14px; color: var(--ink-2); margin-top:
 .multiples { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px 20px; }
 .multiples .panel-title { font-size: 14px; font-weight: 600; margin-top: 10px; }
 
-details.table-view { margin-top: 10px; font-size: 14px; }
-details.table-view summary { cursor: pointer; color: var(--ink-2); }
+details.table-view, details.sql-block { margin-top: 10px; font-size: 14px; }
+details.table-view summary, details.sql-block summary { cursor: pointer; color: var(--ink-2); }
+details.sql-block pre { margin: 10px 0 4px; max-height: 420px; }
+details.sql-block code { font-size: 12.5px; line-height: 1.5; white-space: pre; }
 table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 10px 0; font-variant-numeric: tabular-nums; }
 th, td { text-align: right; padding: 7px 8px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
 th:first-child, td:first-child { text-align: left; }

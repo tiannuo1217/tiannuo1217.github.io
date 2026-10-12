@@ -189,22 +189,28 @@
 
   /* ---------- 2. lines with crosshair ---------- */
   function lines(container, o) {
-    legend(container, o.series.map((s) => ({ kind: "line", color: s.color, label: s.name })));
+    if (o.legend !== false) legend(container, o.series.map((s) => ({ kind: "line", color: s.color, label: s.name })));
     register(container, (holder) => {
-      const H = 300, m = { l: 56, r: 92, t: 14, b: 40 };
+      const H = o.height || 300, m = { l: 56, r: o.right ?? 92, t: 14, b: 40 };
       const { svg, width } = svgFor(holder, H);
       const pw = width - m.l - m.r, ph = H - m.t - m.b;
-      const maxV = niceMax(Math.max(...o.series.flatMap((s) => s.values)));
+      const maxV = o.yMax || niceMax(Math.max(...o.series.flatMap((s) => s.values)));
       const x = (i) => m.l + (i / (o.x.length - 1)) * pw;
       const y = (v) => m.t + ph - (v / maxV) * ph;
       ticks(0, maxV, 4).forEach((tv) => {
         el("line", { x1: m.l, x2: m.l + pw, y1: y(tv), y2: y(tv), stroke: tv === 0 ? css("--axis") : css("--grid"), "stroke-width": 1 }, svg);
         label(svg, m.l - 8, y(tv) + 4, o.yFmt(tv), { "text-anchor": "end" });
       });
-      o.x.forEach((xv, i) => { if (i % o.xEvery === 0 || i === o.x.length - 1) label(svg, x(i), H - m.b + 18, String(xv), { "text-anchor": "middle" }); });
+      // Widen the label step on narrow screens so tick labels never collide.
+      let every = o.xEvery;
+      while (every < o.x.length && (every * pw) / (o.x.length - 1) < 40) every *= 2;
+      o.x.forEach((xv, i) => {
+        const last = i === o.x.length - 1 && i % every >= every / 2;
+        if (i % every === 0 || last) label(svg, x(i), H - m.b + 18, o.xFmt ? o.xFmt(xv) : String(xv), { "text-anchor": "middle" });
+      });
       label(svg, m.l + pw / 2, H - 6, o.xTitle, { "text-anchor": "middle", fill: css("--ink-2") });
       o.series.forEach((s) => {
-        el("path", { d: s.values.map((v, i) => (i ? "L" : "M") + x(i) + "," + y(v)).join(""), fill: "none", stroke: css(s.color), "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
+        el("path", { d: s.values.map((v, i) => (i ? "L" : "M") + x(i) + "," + y(v)).join(""), fill: "none", stroke: css(s.color), "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round", "stroke-dasharray": s.dashed ? "4 4" : "none" }, svg);
         if (s.endLabel) {
           const last = s.values.length - 1;
           el("circle", { cx: x(last), cy: y(s.values[last]), r: 4, fill: css(s.color), stroke: css("--surface"), "stroke-width": 2 }, svg);

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Retail Customer Analytics · Tiannuo Yang</title>
-<meta name="description" content="Cohort retention, LTV, RFM segmentation and a 64,000-customer email A/B test readout on two public retail datasets.">
+<meta name="description" content="Cohort retention, time to second order, LTV, RFM segmentation, an out-of-time repurchase model and a 64,000-customer email A/B test readout on two public retail datasets.">
 <link rel="stylesheet" href="assets/style.css">
 <script src="assets/site-config.js"></script>
 </head>
@@ -26,24 +26,25 @@
     <p class="lede">Two public retail datasets, one question a CRM team asks every week: which customers are worth the next pound or dollar of marketing, and does the email we send actually change behavior?</p>
     <div class="meta-row">
       <span><strong>Role</strong> Solo analyst</span>
-      <span><strong>Tools</strong> SQL (SQLite) · Python (pandas, SciPy, statsmodels)</span>
+      <span><strong>Tools</strong> SQL (SQLite, window functions) · Python (pandas, scikit-learn, SciPy, statsmodels)</span>
       <span><strong>Data</strong> 1.07M transactions · 64,000-customer experiment</span>
     </div>
     <ul class="tags">
-      <li>Data cleaning</li><li>Cohort retention</li><li>LTV</li><li>RFM segmentation</li><li>Holdout validation</li><li>A/B testing</li><li>Targeting</li>
+      <li>Data cleaning</li><li>Cohort retention</li><li>Time to second order</li><li>LTV</li><li>RFM segmentation</li><li>Predictive modeling</li><li>Out-of-time validation</li><li>A/B testing</li><li>Targeting</li>
     </ul>
   </header>
 
   <h2>Summary</h2>
   <div class="stats">
     <div class="stat"><div class="value">71%</div><div class="label">of next-6-month revenue came from the 23% of customers segmented as Champions</div></div>
-    <div class="stat"><div class="value">~20%</div><div class="label">of new customers return the month after their first order, and the curve barely moves after that</div></div>
-    <div class="stat"><div class="value">22–27%</div><div class="label">less 12-month revenue per customer from holiday-quarter cohorts than from Q2–Q3 cohorts</div></div>
+    <div class="stat"><div class="value">64 days</div><div class="label">median wait for a second order; 61% of customers who return within a year do so within 90 days</div></div>
+    <div class="stat"><div class="value">70% vs 61%</div><div class="label">of next-6-month revenue in the top 20% of customers ranked by the model vs. by RFM rules</div></div>
     <div class="stat"><div class="value">2.2x</div><div class="label">conversion from the men's email vs. no email (0.57% → 1.25%)</div></div>
   </div>
   <ol class="findings">
-    <li><strong>The second purchase is the battleground.</strong> About one in five new customers orders again the next month, and that share stays roughly flat for a year. Customers who come back keep coming back, so the first 30 days after a first order deserve the most CRM effort.</li>
+    <li><strong>The second order is the battleground, and it has a window.</strong> 44% of new customers order again within 90 days and 71% within a year; the median wait is 64 days. A "come back" sequence should land between day 30 and day 90.</li>
     <li><strong>Value is concentrated, and the segmentation predicts it.</strong> Segments built only on data up to June 2011 sorted customers by what they actually spent over the following six months.</li>
+    <li><strong>A simple model beats the segments, and needs monitoring.</strong> A logistic regression trained on 2010 data and tested on 2011 ranked customers better than the RFM rules. Its probabilities ran low in the holiday season, so it should be recalibrated each season.</li>
     <li><strong>Holiday shoppers are worth less.</strong> Q4 customers spent as much in their first month as anyone else; they just came back less. Acquisition targets for Q4 should assume a lower LTV.</li>
     <li><strong>Send the men's email by default.</strong> It beat the women's email on visits, conversion and spend. A targeted rule looks about 20% better on a held-out half, but the gain isn't statistically clear yet, so it should be tested before it's rolled out.</li>
   </ol>
@@ -53,6 +54,7 @@
   <figure class="chart">
     <figcaption><div class="title">Data-quality funnel</div><div class="sub">Line items remaining after each rule, applied cumulatively</div></figcaption>
     <div class="table-scroll" id="funnel"></div>
+    <details class="sql-block" data-sql="00_quality_funnel"></details>
   </figure>
   <p>The biggest cut is rows with no customer ID (23% of the raw file). They can't be tied to a person, so they can't feed retention or segmentation. Cancellations matter too: <span id="cancel-share"></span> of identified invoices were cancellations, so revenue would be overstated without the returns filter. The clean table has <strong id="clean-rows"></strong> line items, <strong id="clean-cust"></strong> customers and <strong id="clean-orders"></strong> orders.</p>
 
@@ -61,11 +63,21 @@
   <figure class="chart">
     <figcaption><div class="title">Monthly cohort retention</div><div class="sub">Share of each acquisition cohort that placed an order k months after its first order</div></figcaption>
     <div class="viz" id="heatmap"></div>
+    <details class="sql-block" data-sql="02_cohort_retention"></details>
   </figure>
   <p>For the January–November 2010 cohorts, <strong id="m1"></strong> ordered again in month 1, <strong id="m6"></strong> in month 6 and <strong id="m12"></strong> in month 12. Most of the drop-off happens before the second order; after that, retention is flat.</p>
   <div class="callout"><strong>* A data trap worth catching.</strong> The December 2009 cohort looks far more loyal (<span id="dec-m1"></span> in month 1). It isn't a better cohort: the data starts that month, so its "new" customers include long-standing ones who simply hadn't been seen yet (left-censoring). I left it out of the averages above.</div>
 
-  <h2><span class="section-num">03</span>Which cohorts are worth more?</h2>
+  <h2><span class="section-num">03</span>When do they come back?</h2>
+  <p>Monthly retention hides timing. Using window functions (<code>ROW_NUMBER</code> and <code>LAG</code> over each customer's orders), I measured the days from first to second order for the <strong id="so-n"></strong> customers first seen in 2010, all of whom had at least 11 months to come back.</p>
+  <figure class="chart">
+    <figcaption><div class="title">Share of new customers who have placed a second order</div><div class="sub">By days since first order, customers first seen in 2010</div></figcaption>
+    <div class="viz" id="second"></div>
+    <details class="sql-block" data-sql="05_time_to_second_order"></details>
+  </figure>
+  <p><strong id="so-30"></strong> ordered again within 30 days, <strong id="so-90"></strong> within 90 days and <strong id="so-365"></strong> within a year. Among customers who came back within a year, the median wait was <strong id="so-median"></strong>, and <span id="so-share90"></span> returned within 90 days. The curve is steepest between roughly day 30 and day 90 and flattens after six months, so that is where a post-purchase sequence earns its keep. (<span id="so-same"></span> placed a second order the same day, usually an add-on to the first.)</p>
+
+  <h2><span class="section-num">04</span>Which cohorts are worth more?</h2>
   <p>Retention says whether customers return; lifetime value says what they're worth. I tracked cumulative revenue per acquired customer for the 2010 quarterly cohorts over their first 12 months.</p>
   <figure class="chart">
     <figcaption><div class="title">Cumulative revenue per customer, first 12 months</div><div class="sub">2010 acquisition cohorts, £ per customer acquired</div></figcaption>
@@ -73,7 +85,7 @@
   </figure>
   <p>All four cohorts spent a similar amount in their first month (£440–£490). By month 12 the Q4 cohort (October–December, the holiday season) had reached <strong id="q4"></strong>, against <strong id="q2q3"></strong> for Q2 and Q3. That is 22–27% less. Q1 2010 is higher still, but it sits right after the data start, so some of its customers are probably returning customers rather than new ones; I don't lean on it.</p>
 
-  <h2><span class="section-num">04</span>Segmenting customers, and checking it works</h2>
+  <h2><span class="section-num">05</span>Segmenting customers, and checking it works</h2>
   <p>I scored every customer on recency and frequency as of 9 June 2011, using bands a marketing team can act on (ordered in the last 30 / 90 / 180 / 365 days; 1, 2, 3–4, 5–9 or 10+ orders), and grouped them into six segments. Then I checked the segments against what customers actually did over the next six months, data the segmentation never saw.</p>
   <figure class="chart">
     <figcaption><div class="title">Segment size vs. future revenue</div><div class="sub">Share of customers (as of 9 Jun 2011) and share of revenue over the following six months</div></figcaption>
@@ -81,7 +93,31 @@
   </figure>
   <p><strong>Champions</strong> (ordered in the last 90 days, 5+ orders) are 23% of customers but produced 71% of next-6-month revenue, and 90% of them ordered again. The group to act on is <strong>At risk</strong>: 13% of customers who used to buy often (median 4 orders, historical spend close to Loyal customers) but hadn't ordered in over six months. Fewer than half came back. That's the win-back list.</p>
 
-  <h2><span class="section-num">05</span>Does the email work? An A/B test readout</h2>
+  <h2><span class="section-num">06</span>Can a model beat the rules?</h2>
+  <p>Segments are easy to act on but coarse: everyone in a segment gets the same score. I built a model to rank customers one by one, and tested it the way it would actually be used. It was trained on what was known on <strong>9 Dec 2010</strong> (and who ordered over the next six months), then scored customers as of <strong>9 Jun 2011</strong> and was checked against what they did through December. The test period is later and includes the holidays, so this is an out-of-time test, not a random split.</p>
+  <p>The features are all behavioral and built in SQL: recency, frequency, total spend, average order value, spend in the last 90 days, tenure, average days between orders (a <code>LAG</code> window), product breadth, cancellation rate, share of orders in Oct–Dec, and UK vs. overseas. I compared three scorers: the RFM segments from section 05, a logistic regression and gradient boosting.</p>
+  <figure class="chart">
+    <figcaption><div class="title">Out-of-time results</div><div class="sub">Test set: <span id="mt-n"></span> customers scored on 9 Jun 2011; <span id="mt-base"></span> ordered again by 10 Dec 2011</div></figcaption>
+    <div class="table-scroll" id="model-table"></div>
+    <details class="sql-block" data-sql="06_customer_features"></details>
+  </figure>
+  <figure class="chart">
+    <figcaption><div class="title">How much next-6-month revenue each ranking captures</div><div class="sub">Customers sorted by score; share of their next-6-month revenue covered when contacting the top x%</div></figcaption>
+    <div class="viz" id="gains"></div>
+  </figure>
+  <p>The logistic regression beat the RFM rules on every measure (AUC <span id="auc-l"></span> vs. <span id="auc-r"></span>; the gain is <span id="auc-gain"></span>, 95% bootstrap interval <span id="auc-ci"></span>). In business terms: if the CRM team can only contact 20% of customers, the model's list covers <strong id="cap-l"></strong> of next-6-month revenue, against <strong id="cap-r"></strong> for the RFM list (the gain's 95% interval is <span id="cap-ci"></span>). Gradient boosting did no better than the simpler model, so I'd ship the logistic regression: it is easier to explain, and easier to monitor.</p>
+  <figure class="chart">
+    <figcaption><div class="title">Predicted vs. actual repurchase rate, by score decile</div><div class="sub">Logistic regression on the test period</div></figcaption>
+    <div class="viz" id="calib"></div>
+  </figure>
+  <div class="callout"><strong>The ranking held up; the probabilities didn't.</strong> The model under-predicted every decile, by about <span id="calib-gap"></span> at the bottom. More customers came back in the test window, which includes the holidays (<span id="base-test"></span> vs. <span id="base-train"></span> in training). This is the drift a deployed model has to be monitored for. The fix is to recalibrate before each season, or to train on the same season a year earlier.</div>
+  <figure class="chart">
+    <figcaption><div class="title">What drives the score</div><div class="sub">Drop in test AUC when each feature is shuffled (permutation importance), top six</div></figcaption>
+    <div class="viz" id="importance"></div>
+  </figure>
+  <p>Total spend and number of orders carry most of the signal. Two less obvious drivers: holding total spend fixed, a higher average order value and a longer tenure both <em>lower</em> the odds of a repeat order. That fits large one-off orders from customers who never become regulars. And the model sharpens the win-back list from section 05: within the <span id="ar-n"></span> At-risk customers it barely predicts who will return (<span id="ar-top"></span> vs. <span id="ar-bottom"></span>), but the top half by score holds <strong id="ar-rev"></strong> of the segment's next-6-month revenue. Start the win-back list there.</p>
+
+  <h2><span class="section-num">07</span>Does the email work? An A/B test readout</h2>
   <p>The <a href="https://blog.minethatdata.com/2008/03/minethatdata-e-mail-analytics-and-data.html" rel="noopener">MineThatData experiment</a> randomly split 64,000 recent customers into three groups: a men's merchandise email, a women's merchandise email, or no email. Visits, conversions and spend were tracked for two weeks.</p>
   <p>Before reading results I checked the test was sound. Group sizes matched the planned one-third split (sample-ratio test p = <span id="srm"></span>), and every pre-test variable was balanced across groups (largest standardized difference <span id="smd"></span>, well under the usual 0.1 threshold).</p>
   <figure class="chart">
@@ -90,7 +126,7 @@
   </figure>
   <p>Both emails worked, and the men's email won on every metric: conversion rose from <strong>0.57% to 1.25%</strong> and spend per customer by <strong>$0.77</strong>. Spend per buyer barely changed (<span id="aov"></span>), so the lift comes from more people buying, not bigger baskets.</p>
 
-  <h2><span class="section-num">06</span>Who responds?</h2>
+  <h2><span class="section-num">08</span>Who responds?</h2>
   <p>I split customers by what they had bought in the past year and whether they were new.</p>
   <figure class="chart">
     <figcaption><div class="title">Conversion lift by customer segment</div><div class="sub">Percentage-point lift vs. no email, 95% confidence intervals</div></figcaption>
@@ -98,7 +134,7 @@
   </figure>
   <p>The men's email matched or beat the women's email in five of six segments, even among customers who had only bought women's merchandise. The women's email was only marginally ahead for <em>new</em> women's-only buyers. Existing customers who had only bought men's products barely responded to either email; with a real cost per send, they are the first group to suppress.</p>
 
-  <h2><span class="section-num">07</span>Does targeting beat a blanket send?</h2>
+  <h2><span class="section-num">09</span>Does targeting beat a blanket send?</h2>
   <p>To avoid grading my own homework, I split customers randomly in half. On the first half I picked the best email for each segment; on the second half I estimated what each policy would have earned (inverse-propensity weighting, which works because assignment was random).</p>
   <figure class="chart">
     <figcaption><div class="title">Incremental spend per 1,000 customers, held-out half</div><div class="sub">vs. sending no email</div></figcaption>
@@ -108,8 +144,9 @@
 
   <h2>Recommendations</h2>
   <ol class="findings">
-    <li><strong>Make the second order the KPI.</strong> Put onboarding and post-purchase CRM effort into the first 30 days, and report month-1 repeat rate by acquisition channel.</li>
-    <li><strong>Protect Champions, win back At-risk.</strong> Champions carry 71% of future revenue. The 665 At-risk customers have a track record of buying and are the best win-back audience.</li>
+    <li><strong>Make the second order the KPI, and time it.</strong> Run the post-purchase sequence between day 30 and day 90, and report 90-day repeat rate by acquisition channel.</li>
+    <li><strong>Protect Champions, win back At-risk, ranked by the model.</strong> Champions carry 71% of future revenue. Among the 665 At-risk customers, start with the top half by model score, which holds most of the segment's future revenue.</li>
+    <li><strong>Monitor the model, not just the campaign.</strong> Check calibration before each holiday season and recalibrate when the base rate moves.</li>
     <li><strong>Budget Q4 acquisition on a lower LTV.</strong> Holiday cohorts are worth 22–27% less over a year; CAC targets should reflect that.</li>
     <li><strong>Email: men's creative by default, one focused follow-up test.</strong> Suppress existing men's-only buyers once send costs are in the model.</li>
   </ol>
@@ -118,12 +155,13 @@
   <ul class="plain">
     <li>Both datasets are public and old (2008–2011), and they come from different businesses; the methods carry over, the exact numbers don't.</li>
     <li>No cost or margin data, so the email analysis is about revenue, not profit.</li>
-    <li>RFM bands were chosen to be easy to act on, not optimized; a predictive LTV model (e.g. BG/NBD) would be the next step.</li>
+    <li>RFM bands were chosen to be easy to act on, not optimized. The repurchase model uses behavioral features only (no marketing touches or product categories); a probabilistic CLV model (BG/NBD with Gamma-Gamma) would add a spend forecast.</li>
     <li>The experiment measured two weeks of behavior; longer-term effects such as unsubscribes aren't observed.</li>
   </ul>
 
   <h2>Reproduce it</h2>
   <pre><code>python analysis/retail.py data/raw/online_retail_II.csv
+python analysis/model.py data/raw/online_retail_II.csv
 python analysis/email_experiment.py data/raw/hillstrom.csv
 python analysis/build_site_data.py</code></pre>
   <p class="small muted">All SQL lives in <code>sql/</code>; every number on this page is generated by these scripts.</p>
@@ -137,7 +175,7 @@ python analysis/build_site_data.py</code></pre>
 <script src="assets/charts.js"></script>
 <script>
 (function () {
-  const D = window.SITE_DATA, R = D.retail, E = D.experiment, C = window.Charts;
+  const D = window.SITE_DATA, R = D.retail, E = D.experiment, M = D.model, C = window.Charts;
   const pct = (v, d = 1) => (v * 100).toFixed(d) + "%";
   const num = (v) => Math.round(v).toLocaleString("en-US");
   const gbp = (v) => "£" + Math.round(v).toLocaleString("en-US");
@@ -178,7 +216,7 @@ python analysis/build_site_data.py</code></pre>
     cohorts.map((c) => [monthName(c), num(ret.sizes[c])].concat(cols.map((k) => ret.grid[c][k] != null ? pct(ret.grid[c][k], 0) : "–"))));
   set("m1", pct(ret.avg_m1, 0)); set("m6", pct(ret.avg_m6, 0)); set("m12", pct(ret.avg_m12, 0)); set("dec-m1", pct(ret.dec2009_m1, 0));
 
-  // 03 LTV lines
+  // 04 LTV lines
   const q = R.ltv, quarters = ["2010-Q1", "2010-Q2", "2010-Q3", "2010-Q4"], slots = ["--series-1", "--series-2", "--series-3", "--series-4"];
   const ltvEl = document.getElementById("ltv");
   C.lines(ltvEl, {
@@ -192,7 +230,7 @@ python analysis/build_site_data.py</code></pre>
   set("q4", gbp(q["2010-Q4"].cumulative[11]));
   set("q2q3", gbp(q["2010-Q2"].cumulative[11]) + "–" + gbp(q["2010-Q3"].cumulative[11]));
 
-  // 04 RFM grouped bars
+  // 05 RFM grouped bars
   const seg = R.rfm.segments, rfmEl = document.getElementById("rfm");
   C.groupedBars(rfmEl, {
     cats: seg.map((s) => s.segment), labelWidth: 118, fmt: (v) => pct(v, 0),
@@ -202,7 +240,79 @@ python analysis/build_site_data.py</code></pre>
   C.tableView(rfmEl, ["Segment", "Customers", "% customers", "% next-6m revenue", "Ordered again", "Median days since order", "Median orders"],
     seg.map((s) => [s.segment, num(s.customers), pct(s.share_customers), pct(s.share_next6m_revenue), pct(s.repurchase_rate_next6m, 0), num(s.median_recency_days), String(s.median_orders)]));
 
-  // 05 effects small multiples
+
+  // SQL blocks: show the exact query files the numbers come from
+  document.querySelectorAll("details.sql-block").forEach((d) => {
+    const key = d.getAttribute("data-sql"), sum = document.createElement("summary"), pre = document.createElement("pre"), code = document.createElement("code");
+    sum.textContent = "Show the SQL (sql/" + key + ".sql)";
+    code.textContent = (D.sql[key] || "").trim();
+    pre.appendChild(code); d.appendChild(sum); d.appendChild(pre);
+  });
+
+  // 03 time to second order
+  const so = R.second_order, soEl = document.getElementById("second");
+  set("so-n", num(so.customers)); set("so-30", pct(so.share_within["30"], 0)); set("so-90", pct(so.share_within["90"], 0));
+  set("so-365", pct(so.share_within["365"], 0)); set("so-median", Math.round(so.median_days_repeaters_365) + " days");
+  set("so-share90", pct(so.share_of_year_repeaters_within_90, 0)); set("so-same", pct(so.share_same_day, 0));
+  C.lines(soEl, {
+    legend: false, right: 24, yMax: 0.8, x: so.cumulative.map((_, i) => i), xEvery: 30, xTitle: "Days since first order",
+    xTip: (d) => "Day " + d, yFmt: (v) => pct(v, 0),
+    series: [{ name: "Placed a second order", values: so.cumulative, color: "--series-1" }],
+  });
+  C.tableView(soEl, ["Within", "Share of new customers with a second order"], ["7", "30", "60", "90", "180", "365"].map((k) => [k + " days", pct(so.share_within[k], 0)]));
+
+  // 06 model
+  const MM = M.metrics, names = ["RFM rules", "Logistic regression", "Gradient boosting"];
+  set("mt-n", num(M.test.customers)); set("mt-base", pct(M.test.base_rate, 0));
+  const mt = document.createElement("table"), mh = document.createElement("tr");
+  ["Scorer", "AUC", "PR-AUC", "Brier score", "Top 20%: share of next-6-month revenue"].forEach((h) => { const th = document.createElement("th"); th.textContent = h; mh.appendChild(th); });
+  mt.appendChild(mh);
+  names.forEach((n) => {
+    const tr = document.createElement("tr"), v = MM[n];
+    [n, v.auc.toFixed(3), v.pr_auc.toFixed(3), v.brier.toFixed(3), pct(v.top20_capture_revenue, 0)].forEach((c) => { const td = document.createElement("td"); td.textContent = c; tr.appendChild(td); });
+    mt.appendChild(tr);
+  });
+  document.getElementById("model-table").appendChild(mt);
+  const L = MM["Logistic regression"], RF = MM["RFM rules"];
+  set("auc-l", L.auc.toFixed(3)); set("auc-r", RF.auc.toFixed(3)); set("auc-gain", "+" + L.auc_gain_vs_rfm.toFixed(3));
+  set("auc-ci", "+" + L.auc_gain_ci[0].toFixed(3) + " to +" + L.auc_gain_ci[1].toFixed(3));
+  set("cap-l", pct(L.top20_capture_revenue, 0)); set("cap-r", pct(RF.top20_capture_revenue, 0));
+  set("cap-ci", "+" + Math.round(L.revenue_capture_gain_ci[0] * 100) + " to +" + Math.round(L.revenue_capture_gain_ci[1] * 100) + " points");
+
+  const steps = L.revenue_gains.map((_, i) => i * 5), gEl = document.getElementById("gains");
+  C.lines(gEl, {
+    right: 24, yMax: 1, x: steps, xEvery: 2, xTitle: "Customers contacted, highest score first", xFmt: (v) => v + "%",
+    xTip: (v) => "Top " + v + "% of customers", yFmt: (v) => pct(v, 0),
+    series: [
+      { name: "Logistic regression", values: L.revenue_gains, color: "--series-1" },
+      { name: "Gradient boosting", values: MM["Gradient boosting"].revenue_gains, color: "--series-3" },
+      { name: "RFM rules", values: RF.revenue_gains, color: "--series-2" },
+      { name: "Random order", values: steps.map((v) => v / 100), color: "--deemph" },
+    ],
+  });
+  C.tableView(gEl, ["Top % contacted"].concat(names), steps.filter((v) => v % 10 === 0).map((v) => [v + "%"].concat(names.map((n) => pct(MM[n].revenue_gains[v / 5], 0)))));
+
+  const cal = M.calibration, cEl = document.getElementById("calib");
+  set("calib-gap", Math.round((cal[0].actual - cal[0].predicted) * 100) + " points");
+  set("base-test", pct(M.test.base_rate, 0)); set("base-train", pct(M.train.base_rate, 0));
+  C.lines(cEl, {
+    right: 24, yMax: 1, x: cal.map((r) => r.decile), xEvery: 1, xTitle: "Score decile (1 = lowest predicted)",
+    xTip: (d) => "Decile " + d, yFmt: (v) => pct(v, 0),
+    series: [{ name: "Predicted", values: cal.map((r) => r.predicted), color: "--series-1" },
+             { name: "Actual", values: cal.map((r) => r.actual), color: "--series-2" }],
+  });
+  C.tableView(cEl, ["Decile", "Customers", "Predicted", "Actual"], cal.map((r) => [String(r.decile), num(r.customers), pct(r.predicted, 0), pct(r.actual, 0)]));
+
+  const imp = M.importance.slice(0, 6), iEl = document.getElementById("importance");
+  C.emphasisBars(iEl, { cats: imp.map((r) => r.feature), values: imp.map((r) => r.auc_drop), highlight: 0, labelWidth: 190,
+    fmt: (v) => v.toFixed(3), valueLabel: "AUC drop when shuffled" });
+  C.tableView(iEl, ["Feature", "AUC drop when shuffled", "Direction"], M.importance.map((r) => [r.feature, r.auc_drop.toFixed(4), r.direction]));
+
+  const ar = M.at_risk_split;
+  set("ar-n", num(ar.customers)); set("ar-top", pct(ar.top_half_repurchase, 0) + " of the top half ordered again"); set("ar-bottom", pct(ar.bottom_half_repurchase, 0) + " of the bottom half");
+  set("ar-rev", pct(ar.top_half_revenue_share, 0));
+
+  // 07 effects small multiples
   set("srm", E.srm_p_value.toFixed(2));
   set("smd", Math.max(...Object.values(E.max_abs_smd)).toFixed(3));
   const aov = E.converter_aov;
@@ -232,7 +342,7 @@ python analysis/build_site_data.py</code></pre>
       e.metric === "spend" ? usd(e.control) : pct(e.control, 2), e.metric === "spend" ? usd(e.treated) : pct(e.treated, 2),
       metricFmt[e.metric](e.lift, true), metricFmt[e.metric](e.ci_low, true) + " to " + metricFmt[e.metric](e.ci_high, true), e.p_holm < 0.001 ? "<0.001" : e.p_holm.toFixed(3)]));
 
-  // 06 heterogeneity
+  // 08 heterogeneity
   const cells = ["Bought men's only · existing", "Bought men's only · new", "Bought women's only · existing", "Bought women's only · new", "Bought both · existing", "Bought both · new"];
   const nice = (c) => c.replace("Bought ", "").replace(" · ", ", ").replace(/^./, (s) => s.toUpperCase());
   const conv = E.heterogeneity.filter((h) => h.metric === "conversion");
@@ -245,7 +355,7 @@ python analysis/build_site_data.py</code></pre>
     cells.map((c) => { const mm = conv.find((x) => x.cell === c && x.treatment === "Men's email"), ww = conv.find((x) => x.cell === c && x.treatment === "Women's email");
       return [nice(c), num(mm.n_per_arm), metricFmt.conversion(mm.lift, true), metricFmt.conversion(ww.lift, true)]; }));
 
-  // 07 policy
+  // 09 policy
   const inc = E.policy.incremental_per_1000_vs_no_email;
   const pol = ["Women's email to everyone", "Men's email to everyone", "Targeted (best email per segment)"];
   const polEl = document.getElementById("policy");

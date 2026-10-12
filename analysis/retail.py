@@ -100,6 +100,25 @@ def ltv(con):
     return out
 
 
+def second_order(con):
+    """Cumulative share of 2010-acquired customers who placed a second order within N days."""
+    d = run_sql(con, "05_time_to_second_order.sql")
+    days = d.days_to_second_order
+    n = len(d)
+    curve = [float((days <= k).sum() / n) for k in range(0, 366)]
+    repeaters = days.dropna()
+    within_365 = repeaters[repeaters <= 365]
+    d.to_csv(OUT / "tableau" / "time_to_second_order.csv", index=False)
+    return {
+        "customers": int(n),
+        "cumulative": [round(v, 4) for v in curve],
+        "share_within": {str(k): float((days <= k).sum() / n) for k in (7, 30, 60, 90, 180, 365)},
+        "share_same_day": float((days == 0).sum() / n),
+        "median_days_repeaters_365": float(within_365.median()),
+        "share_of_year_repeaters_within_90": float((within_365 <= 90).mean()),
+    }
+
+
 SEGMENTS = ["Champions", "Loyal", "Promising", "Needs attention", "At risk", "Hibernating"]
 
 
@@ -154,6 +173,7 @@ def main(csv_path):
         "funnel": funnel,
         "kpis": kpis(con, raw),
         "retention": retention(con),
+        "second_order": second_order(con),
         "ltv": ltv(con),
         "rfm": rfm(con),
     }
@@ -163,6 +183,7 @@ def main(csv_path):
     print({k: ret[k] for k in ret if k.startswith(("avg", "dec"))})
     print({q: (v["customers"], v["cumulative"][0], v["cumulative"][-1]) for q, v in result["ltv"].items()})
     print(pd.DataFrame(result["rfm"]["segments"]).round(3).to_string())
+    print({k: v for k, v in result["second_order"].items() if k != "cumulative"})
 
 
 if __name__ == "__main__":
